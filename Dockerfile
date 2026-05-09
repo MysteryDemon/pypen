@@ -1,4 +1,4 @@
-FROM mysterydemon/pypen:arch
+FROM mysterydemon/pypen:master
 
 WORKDIR /app
 ARG S6_OVERLAY_VERSION=3.2.0.2
