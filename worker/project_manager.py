@@ -26,41 +26,44 @@ def install_system_packages(packages: list[str]) -> None:
     if not packages:
         return
 
-    dnf = shutil.which("dnf") or shutil.which("dnf5")
-    if dnf is None:
+    pacman = shutil.which("pacman")
+    if pacman is None:
         logger.warning(
-            f"install_system_packages: dnf not found on PATH; skipping {packages}"
+            f"install_system_packages: pacman not found on PATH; skipping {packages}"
         )
         return
 
+    env = {
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    }
+
     cmd = [
-        dnf, "install", "-y",
-        "--setopt=install_weak_deps=False",
+        pacman, "-Sy", "--needed", "--noconfirm",
         *packages,
     ]
     logger.info(f"install_system_packages: running {' '.join(cmd)}")
     try:
         result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=600
+            cmd, capture_output=True, text=True, timeout=600, env=env
         )
     except subprocess.TimeoutExpired:
-        logger.error("install_system_packages: dnf install timed out after 600s")
+        logger.error("install_system_packages: pacman install timed out after 600s")
         return
     except Exception as exc:
-        logger.error(f"install_system_packages: dnf invocation failed: {exc}")
+        logger.error(f"install_system_packages: pacman invocation failed: {exc}")
         return
 
     for line in (result.stdout or "").splitlines():
-        logger.info(f"[dnf] {line}")
+        logger.info(f"[pacman] {line}")
     for line in (result.stderr or "").splitlines():
         log_fn = logger.info if result.returncode == 0 else logger.error
-        log_fn(f"[dnf] {line}")
+        log_fn(f"[pacman] {line}")
 
     if result.returncode == 0:
         logger.info(f"install_system_packages: ok ({len(packages)} package(s))")
     else:
         logger.error(
-            f"install_system_packages: dnf exited {result.returncode}; "
+            f"install_system_packages: pacman exited {result.returncode}; "
             f"projects depending on these packages may fail to start"
         )
 

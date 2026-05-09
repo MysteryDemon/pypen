@@ -26,9 +26,9 @@
 python_version = "3.11"
 
 # System packages installed once at worker startup (via the host's package
-# manager, e.g. dnf/apt). Listed packages are installed before any project
+# manager, e.g. pacman). Listed packages are installed before any project
 # is cloned so they're available at build/run time.
-dnf_packages = ["ffmpeg", "aria2"]
+pacman_packages = ["ffmpeg", "aria2"]
 
 # Default GitHub/GitLab access token used to clone projects whose
 # `repo = "private"`. Each project may override with its own `access_token`.

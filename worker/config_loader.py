@@ -66,7 +66,7 @@ def _coerce_size_bytes(value: Any) -> int:
         return _DEFAULT_LOGS_SIZE_BYTES
     return max(int(float(number) * multiplier), 4096)
 
-def _normalize_dnf_packages(raw: Any) -> list[str]:
+def _normalize_pacman_packages(raw: Any) -> list[str]:
     if raw is None or raw == "":
         return []
     if isinstance(raw, str):
@@ -88,19 +88,19 @@ def _normalize_dnf_packages(raw: Any) -> list[str]:
 def load_defaults(file_path: str) -> dict[str, Any]:
     path = Path(file_path)
     if not path.exists():
-        return {"dnf_packages": [], "ping": True, "ping_url": ""}
+        return {"pacman_packages": [], "ping": True, "ping_url": ""}
     try:
         with path.open("rb") as fh:
             raw = tomllib.load(fh)
     except tomllib.TOMLDecodeError as exc:
         logger.error(f"load_defaults: TOML parse error in {file_path}: {exc}")
-        return {"dnf_packages": [], "ping": True, "ping_url": ""}
+        return {"pacman_packages": [], "ping": True, "ping_url": ""}
     defaults = raw.get("defaults") or {}
     if not isinstance(defaults, dict):
-        return {"dnf_packages": [], "ping": True, "ping_url": ""}
+        return {"pacman_packages": [], "ping": True, "ping_url": ""}
     ping_raw = defaults.get("ping", True)
     return {
-        "dnf_packages": _normalize_dnf_packages(defaults.get("dnf_packages")),
+        "pacman_packages": _normalize_pacman_packages(defaults.get("pacman_packages")),
         "ping": _coerce_bool(ping_raw) if ping_raw not in (None, "") else True,
         "ping_url": str(defaults.get("ping_url") or "").strip(),
     }

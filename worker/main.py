@@ -23,10 +23,10 @@ async def _main_async(clusters: list[dict]) -> None:
     await cleanup_existing_projects()
 
     defaults = load_defaults(CONFIG_FILE)
-    dnf_packages = defaults.get("dnf_packages") or []
-    if dnf_packages:
+    pacman_packages = defaults.get("pacman_packages") or []
+    if pacman_packages:
         await asyncio.get_event_loop().run_in_executor(
-            None, install_system_packages, dnf_packages
+            None, install_system_packages, pacman_packages
         )
 
     if args.restart:
