@@ -1,3 +1,12 @@
+# Build the Next.js dashboard into static files (web/out).
+FROM node:24-alpine AS dashboard
+WORKDIR /web
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web/ ./
+RUN npm run build
+
 FROM mysterydemon/pypen:latest
 
 WORKDIR /app
@@ -16,5 +25,6 @@ RUN uv pip install --system --no-cache -r requirements.txt
 RUN mkdir -p /etc/s6/services /var/log/s6
 
 COPY . .
+COPY --from=dashboard /web/out ./web/out
 EXPOSE 5000
 CMD ["python3", "start.py"]

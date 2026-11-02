@@ -21,11 +21,16 @@ else:
 
 from app import app, sio
 from app.utils.logging_config import logger
+from itsdangerous import BadSignature
 from quart import (
-    render_template, request, jsonify,
-    redirect, url_for, session, flash, Response,
+    request, jsonify, redirect, url_for, session, Response,
+    send_from_directory,
 )
+from socketio.exceptions import ConnectionRefusedError as SocketRefused
 from werkzeug.exceptions import HTTPException
+
+# Static build of the Next.js dashboard (`npm run build` in web/).
+DASHBOARD_DIR = Path(__file__).resolve().parents[2] / "web" / "out"
 
 S6_LOG_DIR = "/var/log/s6"
 S6_SERVICE_DIR = "/etc/s6/services"
@@ -225,12 +230,31 @@ def _collect_processes() -> list[dict]:
     if needs_rescan:
         s6_rescan()
 
-    for raw_id in _configured_project_ids():
-        if any(svc.endswith("_" + raw_id) or svc == raw_id for svc in services):
-            continue
-        processes.append(_placeholder_for(raw_id))
+    configured = _configured_project_ids()
+    order: dict[str, int] = {}
+    for position, raw_id in enumerate(configured):
+        order.setdefault(raw_id.replace(" ", "_"), position)
+
+    started = {_config_position(svc, order) for svc in services}
+    for raw_id in configured:
+        if order[raw_id.replace(" ", "_")] not in started:
+            processes.append(_placeholder_for(raw_id))
+
+    # Show projects in project.toml order, not by their random name prefix.
+    processes.sort(key=lambda p: _config_position(p["name"], order))
 
     return processes
+
+def _config_position(name: str, order: dict[str, int]) -> int:
+    # Service names are "<adjective>_<noun>_<id>" and the two random words
+    # never contain "_", so the id is everything after the second "_".
+    slug = name.replace(" ", "_")
+    if slug in order:
+        return order[slug]
+    parts = slug.split("_", 2)
+    if len(parts) == 3 and parts[2] in order:
+        return order[parts[2]]
+    return len(order)
 
 def s6_rescan() -> None:
     _run_cmd(["s6-svscanctl", "-a", S6_SERVICE_DIR], timeout=5, quiet=True)
@@ -387,21 +411,45 @@ def login_required(f):
         return await f(*args, **kwargs)
     return decorated_function
 
-@app.route('/login', methods=['GET', 'POST'])
+def api_login_required(f):
+    @wraps(f)
+    async def decorated_function(*args, **kwargs):
+        if 'logged_in' not in session:
+            return jsonify({"status": "error", "message": "Not logged in"}), 401
+        return await f(*args, **kwargs)
+    return decorated_function
+
+async def _dashboard_page(name: str):
+    if not (DASHBOARD_DIR / name).is_file():
+        return jsonify({
+            "status": "error",
+            "message": "Dashboard is not built; run `npm ci && npm run build` in web/",
+        }), 503
+    response = await send_from_directory(DASHBOARD_DIR, name)
+    # Pages point at hashed bundles, so always revalidate them after a rebuild.
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
+@app.route('/login')
 async def login():
-    if request.method == 'POST':
-        form = await request.form
-        username = form['username']
-        password = form['password']
+    if 'logged_in' in session:
+        return redirect(url_for('cluster'))
+    return await _dashboard_page('login.html')
 
-        creds = _dashboard_credentials()
-        if username in creds and creds[username] == password:
-            session['logged_in'] = True
-            return redirect(url_for('cluster'))
-        else:
-            await flash('Invalid credentials. Please try again.')
+@app.route('/auth/login', methods=['POST'])
+async def api_login():
+    data = await request.get_json(silent=True) or {}
+    username = str(data.get('username') or '')
+    password = str(data.get('password') or '')
 
-    return await render_template('login.html')
+    creds = _dashboard_credentials()
+    if username in creds and creds[username] == password:
+        session['logged_in'] = True
+        return jsonify({"status": "success"}), 200
+    return jsonify({
+        "status": "error",
+        "message": "Invalid credentials. Please try again.",
+    }), 401
 
 @app.route('/logout')
 async def logout():
@@ -411,13 +459,32 @@ async def logout():
 @app.route('/')
 @login_required
 async def cluster():
-    return await render_template('cluster.html')
+    return await _dashboard_page('index.html')
+
+@app.route('/logs')
+@login_required
+async def logs_page():
+    return await _dashboard_page('logs.html')
+
+@app.route('/_next/<path:filename>')
+async def dashboard_asset(filename):
+    response = await send_from_directory(DASHBOARD_DIR / "_next", filename)
+    if filename.startswith("static/"):
+        # Content-hashed file names, safe to cache forever.
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return response
+
+@app.route('/icon.svg')
+async def dashboard_icon():
+    return await send_from_directory(DASHBOARD_DIR, 'icon.svg')
 
 @app.route('/service/status', methods=['GET'])
+@api_login_required
 async def list_service_processes():
     return jsonify({"status": "success", "processes": _collect_processes()}), 200
 
 @app.route('/service/pause/<process_name>', methods=['POST'])
+@api_login_required
 async def pause_service_process(process_name):
     logger.info(f"Received pause request for process: {process_name}")
     if not _VALID_NAME_RE.match(process_name):
@@ -429,6 +496,7 @@ async def pause_service_process(process_name):
     return jsonify(result), 500
 
 @app.route('/service/resume/<process_name>', methods=['POST'])
+@api_login_required
 async def resume_service_process(process_name):
     logger.info(f"Received resume request for process: {process_name}")
     if not _VALID_NAME_RE.match(process_name):
@@ -439,8 +507,29 @@ async def resume_service_process(process_name):
         return jsonify(result), 200
     return jsonify(result), 500
 
+def _socket_logged_in(environ: dict) -> bool:
+    # socket.io bypasses Quart, so decode the Quart session cookie by hand.
+    serializer = app.session_interface.get_signing_serializer(app)
+    if serializer is None:
+        return False
+    cookie_name = app.session_interface.get_cookie_name(app)
+    for part in re.split(r"[;,]", environ.get("HTTP_COOKIE", "")):
+        key, _, value = part.strip().partition("=")
+        if key != cookie_name:
+            continue
+        try:
+            data = serializer.loads(
+                value, max_age=int(app.permanent_session_lifetime.total_seconds())
+            )
+        except BadSignature:
+            return False
+        return bool(data.get("logged_in"))
+    return False
+
 @sio.event
 async def connect(sid, environ, auth=None):
+    if not _socket_logged_in(environ):
+        raise SocketRefused("Not logged in")
     logger.debug(f"Client connected: {sid}")
     await sio.emit('connected', {'data': 'Connected'}, to=sid)
     await broadcast_status_update()
@@ -497,6 +586,7 @@ async def _wait_for_status(process_name: str, expected: str | None) -> bool:
     return False
 
 @app.route('/service/<action>/<process_name>', methods=['POST'])
+@api_login_required
 async def manage_service_process(action, process_name):
     logger.info(f"Received {action} request for process: {process_name}")
 
@@ -573,6 +663,7 @@ async def manage_service_process(action, process_name):
         }), 500
 
 @app.route('/service/log/<process_name>', methods=['GET'])
+@api_login_required
 async def download_service_log(process_name):
     try:
         if not _VALID_NAME_RE.match(process_name):
@@ -703,7 +794,7 @@ def thoroughly_cleanup(process_name: str) -> None:
                     (Path(root) / f).unlink()
 
 @app.route('/service/clear_failure/<process_name>', methods=['POST'])
-@login_required
+@api_login_required
 async def clear_failure(process_name):
     if not _VALID_NAME_RE.match(process_name):
         return jsonify({"status": "error", "message": "Invalid process name"}), 400
@@ -804,7 +895,7 @@ def _redeploy_blocking(process_name: str, project: dict) -> None:
         subprocess.run(pip_cmd, check=True)
 
 @app.route('/service/redeploy/<process_name>', methods=['POST'])
-@login_required
+@api_login_required
 async def redeploy_service(process_name):
     logger.info(f"Received redeploy request for process: {process_name}")
     if not _VALID_NAME_RE.match(process_name):
@@ -861,10 +952,10 @@ async def redeploy_service(process_name):
 async def stream_log_page(process_name):
     if not _VALID_NAME_RE.match(process_name):
         return jsonify({"status": "error", "message": "Invalid process name"}), 400
-    return await render_template("log_stream.html", process_name=process_name)
+    return redirect(url_for('logs_page', name=process_name))
 
 @app.route('/service/stream/<process_name>')
-@login_required
+@api_login_required
 async def stream_service_log(process_name):
     if not _VALID_NAME_RE.match(process_name):
         return jsonify({"status": "error", "message": "Invalid process name"}), 400
