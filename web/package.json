@@ -24,7 +24,6 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "shadcn": "^4.23.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
