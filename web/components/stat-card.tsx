@@ -7,7 +7,6 @@ type StatCardProps = {
   label: string
   value: number | null
   icon: LucideIcon
-  /** Icon chip colours. */
   tone: string
 }
 

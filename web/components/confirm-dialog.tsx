@@ -30,7 +30,6 @@ export function ConfirmDialog({
   request: ConfirmRequest | null
   onClose: () => void
 }) {
-  // Keep showing the last request while the close animation runs.
   const [shown, setShown] = useState(request)
   if (request && request !== shown) setShown(request)
 

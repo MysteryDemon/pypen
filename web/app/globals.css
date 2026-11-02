@@ -48,7 +48,6 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* AMOLED: true-black canvas, near-black surfaces, hairline borders. */
 :root {
     color-scheme: dark;
     --background: oklch(0 0 0);

@@ -1,4 +1,3 @@
-# Build the Next.js dashboard into static files (web/out).
 FROM node:24-alpine AS dashboard
 WORKDIR /web
 ENV NEXT_TELEMETRY_DISABLED=1

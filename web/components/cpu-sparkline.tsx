@@ -5,17 +5,12 @@ const W = 100
 const H = 32
 const PAD = 2
 
-/**
- * CPU history (0–100 %) as an area chart. The scale follows the recent peak
- * (never below 20 %) so a steady 5–20 % load still has visible shape.
- */
 export function CpuSparkline({
   samples,
   tone,
   className,
 }: {
   samples: number[]
-  /** Text colour class; the chart draws in `currentColor`. */
   tone?: string
   className?: string
 }) {

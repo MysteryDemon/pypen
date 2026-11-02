@@ -11,7 +11,6 @@ from ..config import MAX_FAILURES, REQUEST_TIMEOUT
 
 
 def wait_for_ready_flag(flag_path: Path, poll_interval: int = 2) -> None:
-    """Block until ``flag_path`` exists. Worker creates it once startup is done."""
     while not flag_path.exists():
         time.sleep(poll_interval)
 

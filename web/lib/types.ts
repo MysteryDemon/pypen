@@ -1,13 +1,10 @@
-/** One s6 service as reported by `/service/status` and the `status_update` event. */
 export type Process = {
   name: string
-  /** RUNNING | STOPPED | BACKOFF | FATAL | PENDING | UNKNOWN */
   status: string
   pid: string | number | null
   uptime: string | null
   paused: boolean
   auto_paused?: boolean
-  /** Percent of the whole machine, or null when not sampled. */
   cpu: number | null
   cpu_history: number[]
 }

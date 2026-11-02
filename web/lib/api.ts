@@ -59,7 +59,6 @@ export const api = {
     }
   },
 
-  /** Fetches the s6 log file and hands it to the browser as a download. */
   downloadLog: async (name: string) => {
     const res = await fetch(`/service/log/${svc(name)}`, { credentials: "same-origin" })
     if (res.status === 401) {

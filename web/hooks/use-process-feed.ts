@@ -9,10 +9,6 @@ const POLL_MS = 3000
 
 export type Connection = "connecting" | "live" | "polling" | "offline"
 
-/**
- * Live process list. Prefers the socket.io `status_update` feed and falls
- * back to polling `/service/status` over HTTP while the socket is down.
- */
 export function useProcessFeed() {
   const [processes, setProcesses] = useState<Process[] | null>(null)
   const [connection, setConnection] = useState<Connection>("connecting")
