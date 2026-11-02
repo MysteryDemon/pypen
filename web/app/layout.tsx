@@ -19,7 +19,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={cn("dark", GeistSans.variable, GeistMono.variable)}
+      className={cn("dark motion-safe:scroll-smooth", GeistSans.variable, GeistMono.variable)}
     >
       <body className="min-h-dvh">
         <TooltipProvider delayDuration={300}>{children}</TooltipProvider>

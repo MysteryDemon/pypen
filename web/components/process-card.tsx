@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { CpuSparkline } from "@/components/cpu-sparkline"
 import type { ConfirmRequest } from "@/components/confirm-dialog"
 import { api, openLogStream } from "@/lib/api"
-import { classify, STATUS_META } from "@/lib/status"
+import { classify, projectAnchor, STATUS_META } from "@/lib/status"
 import type { ActionResult, Process } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -141,7 +141,13 @@ export function ProcessCard({ process, confirm, onChanged }: ProcessCardProps) {
   }
 
   return (
-    <Card className={cn("gap-0 py-0 transition-shadow duration-300", meta.card)}>
+    <Card
+      id={projectAnchor(name)}
+      className={cn(
+        "scroll-mt-6 gap-0 py-0 transition-shadow duration-300 target:ring-2 target:ring-white/40",
+        meta.card
+      )}
+    >
       <div className="p-5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2.5">
