@@ -13,13 +13,9 @@ export function classify(p: Process): StatusKind {
 
 type StatusMeta = {
   label: string
-  /** Status dot. */
   dot: string
-  /** Pill next to the name. */
   badge: string
-  /** Ring + glow on the card. */
   card: string
-  /** `currentColor` for the CPU sparkline. */
   spark: string
 }
 

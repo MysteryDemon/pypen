@@ -18,7 +18,6 @@ export default function DashboardPage() {
   const { processes, connection, refresh } = useProcessFeed()
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
 
-  // The API already lists projects in project.toml order.
   const sorted = processes ?? []
   const stats = summarize(sorted)
   const loading = processes === null

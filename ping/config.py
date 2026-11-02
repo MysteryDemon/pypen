@@ -25,7 +25,6 @@ _normalize_url = normalize_url
 
 
 def _detect_platform_url() -> str | None:
-    # Direct full-URL env vars provided by various hosting platforms.
     for var in (
         "APP_URL",
         "RENDER_EXTERNAL_URL",
@@ -37,7 +36,6 @@ def _detect_platform_url() -> str | None:
         if val:
             return _normalize_url(val)
 
-    # Hostname-only env vars (need https:// prefix).
     for var in (
         "RAILWAY_PUBLIC_DOMAIN",
         "KOYEB_PUBLIC_DOMAIN",
@@ -48,7 +46,6 @@ def _detect_platform_url() -> str | None:
         if val:
             return _normalize_url(val)
 
-    # Derived URLs from app-name env vars.
     fly_app = os.getenv("FLY_APP_NAME")
     if fly_app:
         return f"https://{fly_app}.fly.dev"

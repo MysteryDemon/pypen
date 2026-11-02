@@ -53,7 +53,6 @@ export function LogViewer() {
     let buffer: Line[] = []
     let timer: ReturnType<typeof setTimeout> | null = null
 
-    // EventSource can deliver hundreds of lines a second; batch them per render.
     const flush = () => {
       timer = null
       const batch = buffer
@@ -76,7 +75,6 @@ export function LogViewer() {
     source.onerror = () => {
       if (source.readyState === EventSource.CLOSED) {
         setStream("closed")
-        // A 401 closes the stream for good; this redirects to /login if so.
         api.status().catch(() => {})
       } else {
         setStream("retrying")

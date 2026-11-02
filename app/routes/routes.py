@@ -29,7 +29,6 @@ from quart import (
 from socketio.exceptions import ConnectionRefusedError as SocketRefused
 from werkzeug.exceptions import HTTPException
 
-# Static build of the Next.js dashboard (`npm run build` in web/).
 DASHBOARD_DIR = Path(__file__).resolve().parents[2] / "web" / "out"
 
 S6_LOG_DIR = "/var/log/s6"
@@ -240,14 +239,11 @@ def _collect_processes() -> list[dict]:
         if order[raw_id.replace(" ", "_")] not in started:
             processes.append(_placeholder_for(raw_id))
 
-    # Show projects in project.toml order, not by their random name prefix.
     processes.sort(key=lambda p: _config_position(p["name"], order))
 
     return processes
 
 def _config_position(name: str, order: dict[str, int]) -> int:
-    # Service names are "<adjective>_<noun>_<id>" and the two random words
-    # never contain "_", so the id is everything after the second "_".
     slug = name.replace(" ", "_")
     if slug in order:
         return order[slug]
@@ -426,7 +422,6 @@ async def _dashboard_page(name: str):
             "message": "Dashboard is not built; run `npm ci && npm run build` in web/",
         }), 503
     response = await send_from_directory(DASHBOARD_DIR, name)
-    # Pages point at hashed bundles, so always revalidate them after a rebuild.
     response.headers["Cache-Control"] = "no-cache"
     return response
 
@@ -470,7 +465,6 @@ async def logs_page():
 async def dashboard_asset(filename):
     response = await send_from_directory(DASHBOARD_DIR / "_next", filename)
     if filename.startswith("static/"):
-        # Content-hashed file names, safe to cache forever.
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     return response
 
@@ -508,7 +502,6 @@ async def resume_service_process(process_name):
     return jsonify(result), 500
 
 def _socket_logged_in(environ: dict) -> bool:
-    # socket.io bypasses Quart, so decode the Quart session cookie by hand.
     serializer = app.session_interface.get_signing_serializer(app)
     if serializer is None:
         return False
