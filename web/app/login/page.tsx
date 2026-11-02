@@ -1,5 +1,6 @@
 "use client"
 
+import "@fontsource-variable/space-grotesk"
 import { useState, type FormEvent } from "react"
 import { CircleAlert, LoaderCircle, Lock, LogIn, User } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -37,7 +38,7 @@ export default function LoginPage() {
 
       <div className="relative w-full max-w-sm">
         <Card className="gap-0 p-6">
-          <h1 className="mb-6 text-center text-xl font-semibold tracking-tight">Login</h1>
+          <h1 className="mb-6 text-center font-display text-3xl font-bold tracking-tight">Login</h1>
           <form onSubmit={onSubmit} className="grid gap-5">
             {error && (
               <Alert variant="destructive" className="border-red-500/25 bg-red-500/[0.06]">
