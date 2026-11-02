@@ -64,15 +64,19 @@ export const STATUS_META: Record<StatusKind, StatusMeta> = {
   },
 }
 
-export function summarize(processes: Process[]) {
-  let running = 0
-  let offline = 0
-  let failed = 0
+export function groupByHealth(processes: Process[]) {
+  const running: Process[] = []
+  const offline: Process[] = []
+  const failed: Process[] = []
   for (const p of processes) {
     const kind = classify(p)
-    if (kind === "running") running++
-    else if (kind === "failed" || kind === "warning") failed++
-    else offline++
+    if (kind === "running") running.push(p)
+    else if (kind === "failed" || kind === "warning") failed.push(p)
+    else offline.push(p)
   }
-  return { total: processes.length, running, offline, failed }
+  return { running, offline, failed }
+}
+
+export function projectAnchor(name: string) {
+  return `project-${name.replace(/\s+/g, "_")}`
 }

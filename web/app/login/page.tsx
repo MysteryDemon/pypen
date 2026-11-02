@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { BrandBadge } from "@/components/brand"
 import { api } from "@/lib/api"
 
 export default function LoginPage() {
@@ -30,19 +29,15 @@ export default function LoginPage() {
 
   return (
     <main className="relative grid min-h-dvh place-items-center overflow-hidden px-4 py-12">
-      <title>Sign in · Pypen</title>
+      <title>Login · Pypen</title>
       <div
         aria-hidden="true"
         className="pointer-events-none absolute top-[-12rem] left-1/2 size-[36rem] -translate-x-1/2 rounded-full bg-emerald-500/[0.07] blur-3xl"
       />
 
       <div className="relative w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center gap-4 text-center">
-          <BrandBadge className="size-12 rounded-xl" />
-          <h1 className="text-xl font-semibold tracking-tight">Sign in to Pypen</h1>
-        </div>
-
         <Card className="gap-0 p-6">
+          <h1 className="mb-6 text-center text-xl font-semibold tracking-tight">Login</h1>
           <form onSubmit={onSubmit} className="grid gap-5">
             {error && (
               <Alert variant="destructive" className="border-red-500/25 bg-red-500/[0.06]">

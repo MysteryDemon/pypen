@@ -2,74 +2,69 @@
 
 import { useState } from "react"
 import { Activity, Boxes, CircleOff, LogOut, TriangleAlert } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Brand } from "@/components/brand"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { ConfirmDialog, type ConfirmRequest } from "@/components/confirm-dialog"
-import { ConnectionPill } from "@/components/connection-pill"
 import { ProcessCard } from "@/components/process-card"
 import { StatCard } from "@/components/stat-card"
 import { useProcessFeed } from "@/hooks/use-process-feed"
-import { summarize } from "@/lib/status"
+import { groupByHealth } from "@/lib/status"
 
 export default function DashboardPage() {
-  const { processes, connection, refresh } = useProcessFeed()
+  const { processes, refresh } = useProcessFeed()
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
 
   const sorted = processes ?? []
-  const stats = summarize(sorted)
+  const health = groupByHealth(sorted)
   const loading = processes === null
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-black/75 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <Brand />
-            <ConnectionPill connection={connection} />
-          </div>
-          <div className="flex items-center gap-2">
-            {!loading && (
-              <Badge variant="outline" className="hidden font-mono text-muted-foreground sm:inline-flex">
-                {stats.total} project{stats.total === 1 ? "" : "s"}
-              </Badge>
-            )}
-            <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
-              <a href="/logout">
-                <LogOut /> Logout
-              </a>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="fixed bottom-5 left-5 z-50 size-12 rounded-full text-muted-foreground shadow-lg shadow-black/80 hover:text-red-300 sm:bottom-6 sm:left-6 dark:border-white/15 dark:bg-black dark:hover:border-red-500/40 dark:hover:bg-red-950"
+            asChild
+          >
+            <a href="/logout" aria-label="Logout">
+              <LogOut className="size-5" />
+            </a>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Logout</TooltipContent>
+      </Tooltip>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        <section className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+      <main className="mx-auto max-w-7xl px-4 pt-6 pb-24 sm:px-6 sm:pt-8 lg:px-8">
+        <section className="mb-8 grid grid-cols-2 items-start gap-3 lg:grid-cols-4 lg:gap-4">
           <StatCard
             label="Projects"
-            value={loading ? null : stats.total}
+            value={loading ? null : sorted.length}
             icon={Boxes}
             tone="bg-white/[0.04] text-zinc-300 ring-white/10"
           />
           <StatCard
             label="Running"
-            value={loading ? null : stats.running}
+            value={loading ? null : health.running.length}
             icon={Activity}
             tone="bg-emerald-400/10 text-emerald-400 ring-emerald-400/20"
           />
           <StatCard
             label="Offline"
-            value={loading ? null : stats.offline}
+            value={loading ? null : health.offline.length}
             icon={CircleOff}
             tone="bg-white/[0.04] text-zinc-400 ring-white/10"
+            apps={health.offline}
           />
           <StatCard
             label="Failed"
-            value={loading ? null : stats.failed}
+            value={loading ? null : health.failed.length}
             icon={TriangleAlert}
             tone="bg-red-500/10 text-red-400 ring-red-500/20"
+            apps={health.failed}
           />
         </section>
 
